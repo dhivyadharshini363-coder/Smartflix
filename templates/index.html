@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Movie Recommendation System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Arial}
+body{
+    color:#02040f;
+    min-height:100vh;
+}
+
+.home-bg{
+    background: linear-gradient(to right, #c4a484, #e2e8f0);
+}
+
+.detail-bg{
+    background: linear-gradient(to right, #dbeafe, #3f5b7e);
+}
+
+/* NAV */
+nav{
+position:sticky;top:0;z-index:10;
+padding:15px 25px;
+display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap
+}
+nav h1{color:#0a0107}
+nav input{padding:8px 12px;border-radius:6px;border:none}
+.navBtns button{
+margin-left:8px;
+padding:8px 12px;
+border:none;border-radius:6px;
+cursor:pointer;background:#ffffff;color:#000
+}
+
+/* CONTROLS */
+.controls{
+padding:12px;
+display:flex;gap:12px;justify-content:center;flex-wrap:wrap
+}
+select{padding:8px 12px;border-radius:6px;border:none}
+
+/* SECTIONS */
+.section{padding:25px}
+.section h2{margin-bottom:15px;color:#0a0107}
+
+/* ADD BELOW */
+.center-title{
+  text-align:center;
+}
+
+/* MOVIES */
+.movies{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px
+}
+.movie{
+background:#ffffff;border-radius:10px;
+overflow:hidden;cursor:pointer;
+transition:.3s;
+box-shadow:0 0 15px rgba(56,189,248,.25)
+}
+.movie:hover{transform:scale(1.04)}
+.movie img{
+  width: 100%;
+  aspect-ratio: 2 / 3;   /* poster ratio */
+  object-fit: cover;
+}
+.movie-content{padding:12px}
+.movie-content h3{color:#0a0107;font-size:16px}
+.badge{color:#0a0107}
+
+/* DETAIL */
+#detailView,#favView{display:none;padding:25px}
+.backBtn{cursor:pointer;color: #0a0107;;margin-bottom:15px;display:inline-block}
+.detail-box{
+display:grid;grid-template-columns:300px 1fr;gap:25px
+}
+.detail-box img{width:100%;border-radius:10px}
+button{padding:10px 14px;border:none;border-radius:6px;cursor:pointer;margin-top:8px}
+.favBtn{background:#7ade8c;color:#000}
+.unfavBtn{background:#9f1239;color:#fff}
+.trailerBtn{background:#89b1e1;color:#000}
+
+/* COMMENTS */
+.commentBox textarea{
+width:100%;padding:10px;border-radius:6px;border:none;margin-top:10px
+}
+.commentBox button{background:#d4ef95;color:#000}
+.comment{padding:8px;border-radius:6px;margin-top:6px}
+
+/* TRAILER MODAL */
+#trailerModal{
+display:none;position:fixed;top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,.8);
+justify-content:center;align-items:center;z-index:20
+}
+#trailerModal iframe{width:80%;height:60%}
+.closeModal{color:#fff;font-size:22px;cursor:pointer;margin-bottom:10px}
+
+/* FOOTER */
+footer{text-align:center;padding:15px;opacity:.7}
+
+.stars span {
+    font-size:22px;
+    cursor:pointer;
+    color:#475569; /* grey */
+    transition: color 0.2s;
+}
+
+.stars span.active {
+    color:#facc15; /* yellow */
+}
+
+</style>
+</head>
+
+<body class="home-bg">
+
+<nav>
+<h1 class="center-title">🎬 Movie Recommender 🎬</h1>
+<input id="search" placeholder="Search movie...">
+<div class="navBtns">
+<button onclick="showFav()">❤️ Favourites ❤️</button>
+<button onclick="goHome()">🏠 Home 🏠</button>
+</div>
+</nav>
+
+<div class="controls" id="homeControls">
+<select id="genreFilter">
+<option value="All">All Genres</option>
+<option>Action</option><option>Drama</option>
+<option>Romance</option><option>Sci-Fi</option>
+<option>Thriller</option><option>Fantasy</option>
+</select>
+<select id="ratingFilter">
+<option value="0">All Ratings</option>
+<option value="7">7+</option>
+<option value="8">8+</option>
+<option value="9">9+</option>
+</select>
+<select id="sortBy">
+<option value="none">Sort</option>
+<option value="name">Name</option>
+<option value="rating">Rating</option>
+</select>
+</div>
+
+<!-- HOME -->
+<div id="homeView">
+<div class="section">
+<h2 class="center-title">🔥 TOP MOVIES 🔥</h2>
+<div class="movies" id="topList"></div>
+</div>
+<div class="section">
+<h2 class="center-title">🎥 ALL MOVIES 🎥</h2>
+<div class="movies" id="movieList"></div>
+</div>
+</div>
+
+<!-- DETAIL -->
+<div id="detailView">
+<span class="backBtn" onclick="goHome()">⬅ Back</span>
+<div class="detail-box">
+<img id="detailImg">
+<div>
+<h2 id="detailTitle"></h2>
+<p id="detailDesc"></p>
+<p id="detailGenre"></p>
+<p id="detailRating"></p>
+<div class="stars" id="starBox"></div>
+
+
+<button class="trailerBtn" onclick="openTrailer()">▶ Watch Trailer</button>
+<button id="favBtn"></button>
+
+<h3 style="margin-top:15px;color:#0a0107">💬 Comments</h3>
+<div class="commentBox">
+<textarea id="commentText" placeholder="Write comment..."></textarea>
+<button onclick="addComment()">Add Comment</button>
+<div id="commentList"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- FAV PAGE -->
+<div id="favView">
+<span class="backBtn" onclick="goHome()">⬅ Back</span>
+<h2 class="center-title" style="color:#0a0107">❤️ Your Favourites ❤️</h2>
+<div class="movies" id="favList"></div>
+</div>
+
+<!-- TRAILER -->
+<div id="trailerModal">
+<div>
+<div class="closeModal" onclick="closeTrailer()">❌ Close</div>
+<iframe id="trailerFrame" allowfullscreen></iframe>
+</div>
+</div>
+
+<footer>🌝PinkPopcorn Picks🌝</footer>
+
+<script>
+const movies = [
+
+{id:1,title:"Vikram",genre:"Action",rating:8.3,language:"Tamil",year:2022,
+desc:"Espionage thriller",
+img:"https://image.tmdb.org/t/p/w500/774UV1aCURb4s4JfEFg3IEMu5Zj.jpg",
+trailer:"https://www.youtube.com/embed/OKBMCL-frPU"},
+
+{id:2,title:"Valimai",genre:"Action",rating:6.1,language:"Tamil",year:2022,
+desc:"Bike gangs and revenge",
+img:"https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p21382579_p_v8_aa.jpg",
+trailer:"https://www.youtube.com/embed/Gi83R8jEqZU"},
+
+{id:3,title:"Beast",genre:"Action",rating:8.6,language:"Tamil",year:2022,
+desc:"Mall hostage action",
+img:"https://a.ltrbxd.com/resized/film-poster/7/1/8/0/4/5/718045-beast-0-230-0-345-crop.jpg?v=77f8a1dbbf",
+trailer:"https://youtu.be/0E1kVRRi6lk?"},
+
+{id:4,title:"Jailer",genre:"Action",rating:8.1,language:"Tamil",year:2023,
+desc:"Retired jailer takes revenge",
+img:"https://m.media-amazon.com/images/I/81hSDsdtu0L._AC_UF1000,1000_QL80_.jpg",
+trailer:"https://www.youtube.com/embed/Y5BeWdODPqo"},
+
+{id:5,title:"Leo",genre:"Action",rating:8.0,language:"Tamil",year:2023,
+desc:"Violent past comes back",
+img:"https://mir-s3-cdn-cf.behance.net/project_modules/1400/d23f41184733377.65571621a3846.jpg",
+trailer:"https://www.youtube.com/embed/Po3jStA673E"},
+
+{id:6,title:"Thunivu",genre:"Action",rating:6.3,language:"Tamil",year:2023,
+desc:"Bank heist thriller",
+img:"https://i.pinimg.com/736x/1c/24/b2/1c24b256d8e862c704b0da3a1ed5f078.jpg",
+trailer:"https://www.youtube.com/embed/jnBZboK17_A"},
+
+{id:7,title:"Captain Miller",genre:"Action",rating:7.5,language:"Tamil",year:2024,
+desc:"Colonial revolt story",
+img:"https://in.bmscdn.com/events/moviecard/ET00333139.jpg",
+trailer:"https://www.youtube.com/embed/ujhWbKP1rKA"},
+
+{id:8,title:"Vettaiyan",genre:"Action",rating:7.7,language:"Tamil",year:2024,
+desc:"Hunter seeks justice",
+img:"https://images.fandango.com/ImageRenderer/500/0/redesign/static/img/default_poster--dark-mode.png/0/images/masterrepository/Fandango/237908/Vettaiyan.jpg",
+trailer:"https://www.youtube.com/embed/zPqMbwmGC1U"},
+
+{id:9,title:"Vidaa Muyarchi",genre:"Action",rating:7.6,language:"Tamil",year:2025,
+desc:"Survival chase",
+img:"https://images.plex.tv/photo?size=large-1920&scale=1&url=https%3A%2F%2Fmetadata-static.plex.tv%2F4%2Fgracenote%2F476a0865139f89153bc511a871403b13.jpg",
+trailer:"https://www.youtube.com/embed/hsoGpoDxyKg"},
+
+{id:10,title:"GOAT",genre:"Action",rating:7.5,language:"Tamil",year:2025,
+desc:"Time loop action adventure",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/thalapathy-is-the-goat-et00401441-1725014881.jpg",
+trailer:"https://www.youtube.com/embed/jxCRlebiebw?"},
+
+{id:11,title:"Maamannan",genre:"Drama",rating:7.6,language:"Tamil",year:2023,
+desc:"Political struggle",
+img:"https://images.justwatch.com/poster/333349578/s718/maamannan.jpg",
+trailer:"https://www.youtube.com/embed/xWe03YByWEI"},
+
+{id:12,title:"Viduthalai Part 1",genre:"Drama",rating:8.3,language:"Tamil",year:2023,
+desc:"Police brutality",
+img:"https://m.media-amazon.com/images/S/pv-target-images/89086c13a1bf879c02bb225e6a3fc3d27ca89c5eab5a78b276818bf432b10f55.jpg",
+trailer:"https://www.youtube.com/embed/GYeSfq_bj_M"},
+
+{id:13,title:"Retro",genre:"Drama",rating:8.4,language:"Tamil",year:2025,
+desc:"Nostalgic golden-era feel",
+img:"https://www.deccanchronicle.com/h-upload/2025/04/12/720x1280_1907123-pooja-hegde.webp",
+trailer:"https://www.youtube.com/embed/ZnH_2I0WoFQ"},
+
+{id:14,title:"Lubber Pandhu",genre:"Drama",rating:7.6,language:"Tamil",year:2024,
+desc:"Sports rivalry",
+img:"https://images.justwatch.com/poster/323415204/s718/lubber-pandhu.jpg",
+trailer:"https://www.youtube.com/embed/oP88LHBukW8"},
+
+{id:15,title:"Blue Star",genre:"Drama",rating:7.7,language:"Tamil",year:2024,
+desc:"Cricket & caste issues",
+img:"https://m.media-amazon.com/images/S/pv-target-images/18b53be346e7f4662fd42ccfb65bd4740c783e896b51991a2dbde4aae7dd215d.jpg",
+trailer:"https://www.youtube.com/embed/AGrkyXGiKRE"},
+
+{id:16,title:"Raayan",genre:"Drama",rating:7.4,language:"Tamil",year:2024,
+desc:"Gangster drama",
+img:"https://m.media-amazon.com/images/S/pv-target-images/0a8414e9fa1176c7b2192f5a84d14f28b7e6c51bf34171b0d4cd214d97059dcf.jpg",
+trailer:"https://www.youtube.com/embed/qQJJWhh-XRo"},
+
+{id:17,title:"Garudan",genre:"Drama",rating:7.9,language:"Tamil",year:2024,
+desc:"Village justice",
+img:"https://d2lnbwhcsmj8tp.cloudfront.net/ianslive_watermark/202505313417722.jpeg",
+trailer:"https://www.youtube.com/embed/B2yC1jpAYvQ"},
+
+{id:18,title:"Amaran",genre:"Drama",rating:8.1,language:"Tamil",year:2024,
+desc:"Army officer story",
+img:"https://preview.redd.it/whats-your-honest-opinion-on-the-amaran-trailer-according-v0-bgluvxjzbowd1.jpeg?auto=webp&s=b3586024cf158c9edc358115bf5ae87f7884428c",
+trailer:"https://www.youtube.com/embed/hylIXfZeB4c"},
+
+{id:19,title:"Thalaivan Thalaivii",genre:"Romance / Comedy",rating:5.7,language:"Tamil",year:2025,
+desc:"A romantic comedy drama about a married couple navigating love, family chaos and constant arguments while trying to keep their relationship together",
+img:"https://pbs.twimg.com/media/GulZaxebwAACcCx.jpg",
+trailer:"https://www.youtube.com/embed/nyURE5vmj2I"},
+
+{id:20,title:"Good Night",genre:"Drama",rating:7.7,language:"Tamil",year:2023,
+desc:"Sleep disorder love story",
+img:"https://m.media-amazon.com/images/S/pv-target-images/29c55aa980639b2ff4cb59682b98b7b0ecf3c1c151fae56bdca5e03ef91165c1.jpg",
+trailer:"https://www.youtube.com/embed/eLPePlnFoho"},
+
+{id:21,title:"Love Today",genre:"Romance",rating:7.7,language:"Tamil",year:2022,
+desc:"Modern love story",
+img:"https://play-lh.googleusercontent.com/proxy/U79SqeNAEp44EacL5qu1OzKSOAd5el3YPHyxI5wqI7HgPR-PpO3zfv2i_4f3qgpNB-YJx45tQ-xi1wRjnAnPPBS5QjAK43KYQPdRimGVYd-xlhXhWFHTat7v1YeR1uf6Ut2ZKSUL089dEWwlncRjE8JALaf1rnDCRSNrJg",
+trailer:"https://www.youtube.com/embed/FaQe8JFGdaM"},
+
+{id:22,title:"Don",genre:"Romance",rating:7.4,language:"Tamil",year:2022,
+desc:"College life romance",
+img:"https://images.justwatch.com/poster/284148508/s718/don-2022.jpg",
+trailer:"https://www.youtube.com/embed/s5ak-NY6OC8"},
+
+{id:23,title:"Sita Ramam",genre:"Romance",rating:8.1,language:"Tamil",year:2022,
+desc:"Epic love story",
+img:"https://images.justwatch.com/poster/300704972/s718/sita-ramam.jpg",
+trailer:"https://www.youtube.com/embed/QS2UPxj_Y9w"},
+
+{id:24,title:"Dada",genre:"Romance",rating:7.6,language:"Tamil",year:2023,
+desc:"Romantic drama",
+img:"https://m.media-amazon.com/images/S/pv-target-images/c71c6718ab15c8a88dd5d9e60902d23bd3633fbd3e7fc10e98a45d861a796cfa.jpg",
+trailer:"https://www.youtube.com/embed/23mMdgo0prk"},
+
+{id:25,title:"Thiruchitrambalam",genre:"Romance / Drama",rating:7.8,language:"Tamil",year:2022,
+desc:"A heartwarming story of love, friendship, and family bonds, following a middle-aged man navigating life and romance",
+img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlCZsI24nQ7UhiCORtJY740JAjZaslgx_WZQgAMIIkDVgxL6pJjh0ZJqmSW92opfYbSUlY&s=10",
+trailer:"https://www.youtube.com/embed/tNnPHz1u3RM"},
+
+{id:26,title:"Takkar",genre:"Romance",rating:7.5,language:"Tamil",year:2023,
+desc:"Action & love mix",
+img:"https://m.media-amazon.com/images/S/pv-target-images/e08398b99048cfdbc4bc745f78e6822d5cf3eea9004a211e98eaf709e1ea2341.jpg",
+trailer:"https://www.youtube.com/embed/IFTOwqw2cF4"},
+
+{id:27,title:"Joe",genre:"Romance",rating:7.2,language:"Tamil",year:2023,
+desc:"College romance",
+img:"https://m.media-amazon.com/images/S/pv-target-images/0bfc2378464daf6d851bb86eb0b202fb73279b2748546c104c031884d4117aaa.jpg",
+trailer:"https://www.youtube.com/embed/2lrbAHMACrM"},
+
+{id:28,title:"Lover",genre:"Romance",rating:7.9,language:"Tamil",year:2024,
+desc:"Modern love challenges",
+img:"https://images.justwatch.com/poster/311701417/s718/lover-2024.jpg",
+trailer:"https://www.youtube.com/embed/UkFD3pKmSks"},
+
+{id:29,title:"Star",genre:"Romance",rating:7.6,language:"Tamil",year:2024,
+desc:"Romantic musical",
+img:"https://images.justwatch.com/poster/315475122/s718/star-2024.jpg",
+trailer:"https://www.youtube.com/embed/5QlTZEogGrE"},
+
+{id:30,title:"Oh My Kadavule",genre:"Romance",rating:8.0,language:"Tamil",year:2025,
+desc:"Sequel of romantic comedy",
+img:"https://m.media-amazon.com/images/S/pv-target-images/3b467cf7bcf49fda9ed57b984aaed9e2912ab50d4c2fe8cb00064e97cf93964e.jpg",
+trailer:"https://www.youtube.com/embed/5lUWBM2uYaQ"},
+
+{id:31,title:"Maanaadu",genre:"Sci-Fi",rating:8.1,language:"Tamil",year:2022,
+desc:"Time loop political thriller",
+img:"https://mir-s3-cdn-cf.behance.net/project_modules/1400_webp/2b4dee132143103.61a388481fe6a.jpg",
+trailer:"https://www.youtube.com/embed/3FuuZU21S80"},
+
+{id:32,title:"Mark Antony",genre:"Sci-Fi",rating:7.2,language:"Tamil",year:2023,
+desc:"Time-travel phone adventure",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/mark-antony-et00367366-1692281157.jpg",
+trailer:"https://www.youtube.com/embed/Dg8X7SZ_4bs"},
+
+{id:33,title:"Ayalaan",genre:"Sci-Fi",rating:6.9,language:"Tamil",year:2024,
+desc:"Alien and human friendship",
+img:"https://images.justwatch.com/poster/310502709/s718/ayalaan.jpg",
+trailer:"https://www.youtube.com/embed/kNpwAxnjbNA"},
+
+{id:34,title:"GOAT",genre:"Sci-Fi",rating:7.5,language:"Tamil",year:2025,
+desc:"Time loop action story",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/thalapathy-is-the-goat-et00401441-1725014881.jpg",
+trailer:"https://www.youtube.com/embed/jxCRlebiebw"},
+
+{id:35,title:"Project K (Tamil Dub)",genre:"Sci-Fi",rating:8.3,language:"Tamil",year:2025,
+desc:"Futuristic sci-fi adventure",
+img:"https://hamaraphotos.com/wp-content/uploads/2023/07/Prabhas-in-Project-K.jpg",
+trailer:"https://www.youtube.com/embed/YxKQeLaEH_M"},
+
+{id:36,title:"Trip",genre:"Sci-Fi",rating:6.5,language:"Tamil",year:2021,
+desc:"Forest trip turns into a mysterious sci-fi thriller",
+img:"https://img.studioflicks.com/wp-content/uploads/2021/08/17130825/41K5LsBvp5vtpQKx2hqIE8iLDtZ.jpg",
+trailer:"https://www.youtube.com/embed/V0CV9F40ZUo"},
+
+{id:37,title:"Jango",genre:"Sci-Fi",rating:6.8,language:"Tamil",year:2021,
+desc:"A neurosurgeon trapped in a dangerous time loop",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/jango-et00317769-15-11-2021-07-13-25.jpg",
+trailer:"https://www.youtube.com/embed/9aIwhO7ixjI"},
+
+{id:38,title:"Captain",genre:"Sci-Fi",rating:6.8,language:"Tamil",year:2022,
+desc:"Space adventure story",
+img:"https://m.media-amazon.com/images/M/MV5BNWVkOTYzZTMtM2RiNi00MjA5LWFmZmUtYTk4MWU3Y2U1MzI3XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
+trailer:"https://www.youtube.com/embed/93Pu7MoKVQk"},
+
+{id:39,title:"Miral",genre:"Sci-Fi",rating:7.0,language:"Tamil",year:2022,
+desc:"Science experiment thriller",
+img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUgyGr6RbcGsmWMXujY3Mdyz5zs0SO1pW2pA&s",
+trailer:"https://www.youtube.com/embed/H1sYpgFNqrc"},
+
+{id:40,title:"Enemy",genre:"Sci-Fi",rating:7.3,language:"Tamil",year:2022,
+desc:"AI-driven suspense",
+img:"https://media.newindianexpress.com/TNIE%2Fimport%2Fuploads%2Fuser%2Fckeditor_images%2Farticle%2F2021%2F11%2F5%2Faeh_aegh.jpg?w=640&auto=format%2Ccompress",
+trailer:"https://www.youtube.com/embed/mXqCbQommQg"},
+
+{id:41,title:"Ratsasan",genre:"Thriller",rating:8.1,language:"Tamil",year:2022,
+desc:"Serial killer investigation",
+img:"https://images.justwatch.com/poster/320104928/s718/ratsasan.jpg",
+trailer:"https://www.youtube.com/embed/GsrN7rNch9Y"},
+
+{id:42,title:"Sirai",genre:"Thriller",rating:8.4,language:"Tamil",year:2023,
+desc:"Justice and Humanity",
+img:"https://images.plex.tv/photo?size=large-1920&scale=1&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2FnoajjG2ItNNI3F2AelioM8ayzvp.jpg",
+trailer:"https://www.youtube.com/embed/QeVJ9Aw7X2E"},
+
+{id:43,title:"Tamilarasan",genre:"Action / Thriller",rating:4.3,language:"Tamil",year:2023,
+desc:"An honest police officer takes drastic steps to save his son when a greedy hospital refuses timely treatment, leading to a tense hostage situation and cat-and-mouse conflict with corrupt authorities",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/tamilarasan-et00347413-1671189319.jpg",
+trailer:"https://www.youtube.com/embed/R6kttoZGG20"},
+
+{id:44,title:"Theera Kaadhal",genre:"Thriller",rating:7.4,language:"Tamil",year:2023,
+desc:"Love and revenge plot",
+img:"https://i.pinimg.com/736x/19/33/11/1933114973d0f229e31966d9157d94bd.jpg",
+trailer:"https://www.youtube.com/embed/l7V4Q_dXY_c"},
+
+{id:45,title:"Merry Christmas",genre:"Thriller",rating:7.0,language:"Tamil",year:2024,
+desc:"Holiday heist suspense",
+img:"https://thesouthfirst.com/wp-content/uploads/2024/01/Merry-Christmas-is-a-thriller-e1705030378526.jpg",
+trailer:"https://www.youtube.com/embed/xwm2BIS81CU"},
+
+{id:46,title:"Chitha",genre:"Thriller",rating:7.3,language:"Tamil",year:2023,
+desc:"Political revenge thriller",
+img:"https://d1lcdpwgve0lt5.cloudfront.net/78575/public/public/system/posters/1476443/standard/Chithha-213x285_1701110546.jpg",
+trailer:"https://www.youtube.com/embed/T0C5I90Y-sA"},
+
+{id:47,title:"Iraivan",genre:"Thriller",rating:7.1,language:"Tamil",year:2023,
+desc:"Mystery and suspense",
+img:"https://images.plex.tv/photo?size=large-1280&url=https%3A%2F%2Fmetadata-static.plex.tv%2F2%2Fgracenote%2F264253a62b8d7c8e7ba83f56813ad25f.jpg",
+trailer:"https://www.youtube.com/embed/-qX93tgvung"},
+
+{id:48,title:"Ayothi",genre:"Thriller",rating:7.0,language:"Tamil",year:2023,
+desc:"Village crime story",
+img:"https://malinimannath.wordpress.com/wp-content/uploads/2023/03/image-3.png",
+trailer:"https://www.youtube.com/embed/EUIhalCuqmM"},
+
+{id:49,title:"Satham Indri Mutham Tha",genre:"Thriller",rating:7.2,language:"Tamil",year:2024,
+desc:"Love and crime suspense",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/sathamindri-mutham-tha-et00388377-1708593388.jpg",
+trailer:"https://www.youtube.com/embed/xl1M1MVuYtY"},
+
+{id:50,title:"Shakthi Thirumagan",genre:"Thriller",rating:6.8,language:"Tamil",year:2025,
+desc:"A politically charged action thriller where a determined protagonist navigates betrayal, power struggles and corruption to uncover the truth behind a devastating conspiracy",
+img:"https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/shakthi-thirumagan-et00438275-1742196590.jpg",
+trailer:"https://www.youtube.com/embed/YXfItj2Xy9M"},
+
+{id:51,title:"Ponniyin Selvan 1",genre:"Fantasy",rating:7.9,language:"Tamil",year:2022,
+desc:"Chola dynasty epic",
+img:"https://m.media-amazon.com/images/S/pv-target-images/48abd05d574de48330378d4bd184e71c84b74ece5ddb1c3240fc7fa5a2878e10.jpg",
+trailer:"https://www.youtube.com/embed/D4qAQYlgZQs"},
+
+{id:52,title:"Ponniyin Selvan 2",genre:"Fantasy",rating:8.2,language:"Tamil",year:2023,
+desc:"Chola climax continuation",
+img:"https://akm-img-a-in.tosshub.com/indiatoday/images/story/202304/ponniyin_selvan_2_movie_review_0-one_one.jpg?VersionId=NulJy7sTKAqyddI6Z0VKOcwE7BqGeyYx",
+trailer:"https://www.youtube.com/embed/EnhS3matIoU"},
+
+{id:53,title:"Kanguva",genre:"Fantasy",rating:7.8,language:"Tamil",year:2025,
+desc:"Epic tribal warrior story",
+img:"https://m.media-amazon.com/images/S/pv-target-images/f0049feac420f98aac7f08afbf6862186e93bd1693d43260e34cfa090e29fe69.jpg",
+trailer:"https://www.youtube.com/embed/ajnCMSC4VPo"},
+
+{id:54,title:"Thangalaan",genre:"Fantasy",rating:7.9,language:"Tamil",year:2024,
+desc:"Gold miner epic",
+img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjsaqYP_0DBTc0bTyJhrvCCBJT4t2JPEh_Ig&s",
+trailer:"https://www.youtube.com/embed/9KUOQvF25NI"},
+
+{id:55,title:"Kantara (Tamil Dub)",genre:"Fantasy",rating:8.0,language:"Tamil",year:2022,
+desc:"Forest spirit saga",
+img:"https://m.media-amazon.com/images/I/81Dgx4SspcL._UXNaN_FMjpg_QL85_.jpg",
+trailer:"https://www.youtube.com/embed/fUwMWzdeXyc"},
+
+{id:56,title:"Yaanai Mugathaan",genre:"Fantasy",rating:7.4,language:"Tamil",year:2023,
+desc:"Divine intervention tale",
+img:"https://m.media-amazon.com/images/S/pv-target-images/1aef8efdaa0e6d46a8b3cb06ee5dcb9b8298926025db7b3da005fd36716f0598.jpg",
+trailer:"https://www.youtube.com/embed/tmLuTP84lPk"},
+
+{id:57,title:"Maareesan",genre:"Drama Thriller",rating:7.0,language:"Tamil",year:2025,
+desc:"A gripping drama thriller starring Vadivelu and Fahadh Faasil, blending emotional twists and suspenseful storytelling",
+img:"https://images.justwatch.com/poster/331753241/s718/maareesan.jpg",
+trailer:"https://www.youtube.com/embed/a8zKHSKHThY"},
+
+{id:58,title:"Yamakaathaghi",genre:"Thriller",rating:6.8,language:"Tamil",year:2025,
+desc:"A suspenseful supernatural thriller where mysterious events unfold around a haunted estate, keeping everyone on edge",
+img:"https://mir-s3-cdn-cf.behance.net/project_modules/1400/33adaa154169829.633d503571f94.jpg",
+trailer:"https://www.youtube.com/embed/rBfnBGceZZQ"},
+
+{id:59,title:"Karungaapiyam",genre:"Fantasy",rating:7.2,language:"Tamil",year:2023,
+desc:"Mystical folklore adventure",
+img:"https://m.media-amazon.com/images/S/pv-target-images/f685648f6157321e87e3f09671bf8513119fc39defc7103fb0d0567e5c61d054.jpg",
+trailer:"https://www.youtube.com/embed/VXj-aSs4LE0"},
+
+{id:60,title:"Karthikeya 2 (Tamil Dub)",genre:"Fantasy",rating:7.5,language:"Tamil",year:2022,
+desc:"Mythological treasure hunt",
+img:"https://c.saavncdn.com/506/Karthikeya-2-Telugu-2022-20220901111424-500x500.jpg",
+trailer:"https://www.youtube.com/embed/5K9enaJWNM4"}
+
+];
+
+let favourites=JSON.parse(localStorage.getItem("fav"))||[];
+let currentMovie=null;
+
+/* RENDER */
+function render(list,el){
+    el.innerHTML="";
+    list.forEach(m=>{
+        el.innerHTML+=`
+        <div class="movie" onclick="openDetail(${m.id})">
+            <img src="${m.img}">
+            <div class="movie-content">
+                <h3>${m.title}</h3>
+                <span class="badge">⭐ ${m.rating}</span>
+            </div>
+        </div>`;
+    });
+}
+
+/* FILTER */
+function filterMovies(){
+    let txt = search.value.toLowerCase();
+    let g = genreFilter.value;
+    let r = +ratingFilter.value;
+    let s = sortBy.value;
+
+    let f = movies.filter(m =>
+        m.title.toLowerCase().includes(txt) &&
+        (g === "All" || m.genre === g) &&
+        m.rating >= r
+    );
+
+    if(s === "name") f.sort((a,b)=>a.title.localeCompare(b.title));
+    if(s === "rating") f.sort((a,b)=>b.rating - a.rating);
+
+    render(f, movieList);
+    render(
+  f
+    .filter(m => m.rating >= 8.0)   // condition for top movies
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 15),                  // LIMIT TO 15 MOVIES
+  topList
+);
+}
+
+/* DETAIL */
+function openDetail(id){
+    currentMovie = movies.find(m=>m.id===id);
+    document.body.classList.remove("home-bg");
+    document.body.classList.add("detail-bg");
+    homeView.style.display="none";
+    homeControls.style.display="none";
+    favView.style.display="none";
+    detailView.style.display="block";
+
+    detailImg.src=currentMovie.img;
+    detailTitle.innerText=currentMovie.title;
+    detailDesc.innerText=currentMovie.desc;
+    detailGenre.innerText="Genre: "+currentMovie.genre;
+    detailRating.innerText="⭐ "+currentMovie.rating;
+
+    favBtn.className=favourites.includes(id)?"unfavBtn":"favBtn";
+    favBtn.innerText=favourites.includes(id)?"Remove Favourite":"Add Favourite";
+    favBtn.onclick=()=>toggleFav(id);
+
+    renderStars();
+    getComments(currentMovie.title); // Fetch comments from backend
+}
+
+/* FAV */
+function toggleFav(id){
+    favourites.includes(id)
+    ? favourites = favourites.filter(x=>x!==id)
+    : favourites.push(id);
+    localStorage.setItem("fav", JSON.stringify(favourites));
+    openDetail(id);
+}
+function showFav(){
+    homeView.style.display="none";
+    detailView.style.display="none";
+    homeControls.style.display="none";
+    favView.style.display="block";
+    render(movies.filter(m=>favourites.includes(m.id)), favList);
+}
+
+/* COMMENTS */
+function addComment(){
+    let comment = commentText.value.trim();
+    if(comment === "") return;
+
+    let userName = prompt("Enter your name");
+    if(!userName) return;
+
+    let starRating = 0;
+    let stars = starBox.querySelectorAll(".active");
+    starRating = stars.length;
+
+    fetch("/add-review", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: userName,
+            movie: currentMovie.title,
+            rating: starRating,
+            comment: comment
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        commentText.value = "";
+        getComments(currentMovie.title);
+    });
+}
+
+function getComments(title){
+    fetch(`/get-reviews/${encodeURIComponent(title)}`)
+    .then(res => res.json())
+    .then(data => {
+        commentList.innerHTML = "";
+        if(data.length === 0){
+            commentList.innerHTML = "<div class='comment'>No comments yet</div>";
+        } else {
+            data.forEach(r => {
+                commentList.innerHTML += `<div class="comment">
+                    <strong>${r.name}</strong> (${r.rating}⭐): ${r.comment}
+                </div>`;
+            });
+        }
+    });
+}
+
+/* TRAILER */
+function openTrailer(){
+    trailerModal.style.display="flex";
+    trailerFrame.src=currentMovie.trailer;
+}
+function closeTrailer(){
+    trailerModal.style.display="none";
+    trailerFrame.src="";
+}
+
+/* HOME */
+function goHome(){
+    document.body.classList.remove("detail-bg");
+    document.body.classList.add("home-bg");
+    detailView.style.display="none";
+    favView.style.display="none";
+    homeView.style.display="block";
+    homeControls.style.display="flex";
+}
+
+/* EVENTS */
+search.oninput = filterMovies;
+genreFilter.onchange = filterMovies;
+ratingFilter.onchange = filterMovies;
+sortBy.onchange = filterMovies;
+
+/* INIT */
+render(movies, topList);
+filterMovies();
+
+let userRating = 0; // store clicked rating
+
+function renderStars(){
+    starBox.innerHTML = "";
+    for(let i=1; i<=5; i++){
+        let star = document.createElement("span");
+        star.innerHTML = "★";
+
+        // Highlight stars based on currentMovie rating or userRating
+        if(userRating > 0){
+            if(i <= userRating) star.classList.add("active");
+        } else {
+            if(i <= Math.round(currentMovie.rating / 2)) star.classList.add("active");
+        }
+
+        // When user clicks, update userRating and colors
+        star.onclick = () => {
+            userRating = i; // store clicked rating
+            let stars = starBox.querySelectorAll("span");
+            stars.forEach((s, index) => {
+                if(index < i){
+                    s.classList.add("active");
+                } else {
+                    s.classList.remove("active");
+                }
+            });
+        };
+
+        starBox.appendChild(star);
+    }
+}
+
+</script>
+
+</body>
+</html>
